@@ -2,70 +2,7 @@ use std::{fs, io};
 use std::collections::linked_list::LinkedList;
 
 const INPUT_FILE_PATH: &str = "./in/input.txt";
-const IS_READING_FROM_FILE: bool = false;
-
-const ENGLISH_ALPHABET_SIZE: i32 = 26;
-
-struct TreeNode {
-    is_end: bool,
-    next_map: Vec<usize>
-}
-
-impl TreeNode {
-    fn new() -> TreeNode {
-        TreeNode {
-            next_map: vec![0; ENGLISH_ALPHABET_SIZE as usize],
-            is_end: false
-        }
-    }
-}
-
-struct StringTree {
-    nodes: Vec<TreeNode>
-}
-
-impl StringTree {
-    fn new() -> StringTree {
-        StringTree {
-            nodes: vec![TreeNode::new()]
-        }
-    }
-
-    fn get_char_index(ch: char) -> usize {
-        (ch as i32 - 'a' as i32) as usize
-    }
-
-    fn add_string(&mut self, s: &String) {
-        let mut current_node = 0;
-        s.chars().for_each(|ch| {
-            let char_index = StringTree::get_char_index(ch);
-            let mut next_node = self.nodes[current_node].next_map[char_index];
-            if next_node == 0 {
-                next_node = self.add_node();
-                self.nodes[current_node].next_map[char_index] = next_node;
-            }
-            current_node = next_node
-        });
-        self.nodes[current_node].is_end = true;
-    }
-
-    fn find_every_substring(&mut self, s: &String) -> Vec<bool> {
-        let mut result = vec![false; s.len()];
-        let mut current_node = 0;
-        s.chars().enumerate().for_each(|(i, ch)| {
-            let char_index = StringTree::get_char_index(ch);
-            let next_index = self.nodes[current_node].next_map[char_index];
-            result[i] = self.nodes[next_index].is_end;
-            current_node = next_index
-        });
-        result
-    }
-
-    fn add_node(&mut self) -> usize {
-        self.nodes.push(TreeNode::new());
-        self.nodes.len() - 1
-    }
-}
+const IS_READING_FROM_FILE: bool = true;
 
 fn main() {
     let mut data_reader = get_data_reader(IS_READING_FROM_FILE);
@@ -73,34 +10,24 @@ fn main() {
 
     for _ in 0..t {
         let n = data_reader.next_i32();
-        let a: Vec<String> = (0..n).into_iter().map(|_| data_reader.next_string()).collect();
-        let mut left_tree = StringTree::new();
-        let mut right_tree = StringTree::new();
-        a.iter().for_each(|s| {
-            left_tree.add_string(&s);
-            right_tree.add_string(&s.chars().rev().collect());
-        });
-        let mut result = vec![false; a.len()];
-        a.iter().enumerate().for_each(|(string_index, s)| {
-            let left = left_tree.find_every_substring(&s);
-            let right: Vec<bool> = right_tree.find_every_substring(&s.chars().rev().collect()).into_iter().rev().collect();
-            for i in 0..s.len() - 1 {
-                if left[i] && right[i + 1] {
-                    result[string_index] = true;
-                }
+        let a: Vec<i32> = (0..n).into_iter().map(|_| data_reader.next_i32()).collect();
+        let p: Vec<i32> = a.iter().enumerate().map(|(i, x)| x.to_owned() - i as i32 - 1).collect();
+        let mut vec = a.iter().enumerate()
+            .filter(|(i, _)| p[*i] < 0)
+            .map(|(_, x)| x.to_owned())
+            .collect::<Vec<i32>>();
+        vec.sort();
+        let mut list: LinkedList<i32> = vec.into_iter().collect();
+        let mut answer = 0;
+        for i in 0..n {
+            if p[i as usize] >= 0 { continue; }
+            while !list.is_empty() && list.front().unwrap().to_owned() <= i + 1 {
+                list.pop_front();
             }
-        });
-        println!("{}", format_bool_vec(&result));
+            answer += list.len();
+        }
+        println!("{}", answer);
     }
-}
-
-// formatters
-fn format_vec<T: ToString>(vec: &Vec<T>) -> String {
-    vec.iter().map(|x| x.to_string() + " ").collect::<Vec<String>>().join("")
-}
-
-fn format_bool_vec(vec: &Vec<bool>) -> String {
-    vec.iter().map(|x| if x.to_owned() { 1 } else { 0 }).map(|x| x.to_string()).collect::<Vec<String>>().join("")
 }
 
 // DataReader
