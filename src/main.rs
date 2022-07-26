@@ -1,32 +1,39 @@
-use std::{fs, io};
+use std::{cmp, fs, io};
 use std::collections::linked_list::LinkedList;
 
 const INPUT_FILE_PATH: &str = "./in/input.txt";
 const IS_READING_FROM_FILE: bool = true;
+
+const MAX_POWER: usize = 64;
 
 fn main() {
     let mut data_reader = get_data_reader(IS_READING_FROM_FILE);
     let t = data_reader.next_i32();
 
     for _ in 0..t {
-        let n = data_reader.next_i32();
-        let a: Vec<i32> = (0..n).into_iter().map(|_| data_reader.next_i32()).collect();
-        let p: Vec<i32> = a.iter().enumerate().map(|(i, x)| x.to_owned() - i as i32 - 1).collect();
-        let mut vec = a.iter().enumerate()
-            .filter(|(i, _)| p[*i] < 0)
-            .map(|(_, x)| x.to_owned())
-            .collect::<Vec<i32>>();
-        vec.sort();
-        let mut list: LinkedList<i32> = vec.into_iter().collect();
-        let mut answer = 0;
+        let n = data_reader.next_i32() as usize;
+        let k = data_reader.next_i32() as i64;
+
+        let a: Vec<i64> = (0..n).into_iter().map(|_| data_reader.next_i32() as i64).collect();
+        let mut dp: Vec<Vec<i64>> = vec![vec![i64::MIN; MAX_POWER]; n + 1];
+        dp[0][0] = 0;
         for i in 0..n {
-            if p[i as usize] >= 0 { continue; }
-            while !list.is_empty() && list.front().unwrap().to_owned() <= i + 1 {
-                list.pop_front();
+            for j in 0..MAX_POWER {
+                if dp[i][j] == i64::MIN { continue; }
+                let divided = a[i].checked_shr(j as u32).unwrap_or(0);
+                dp[i + 1][j] = cmp::max(dp[i][j] - k + divided, dp[i + 1][j]);
+
+                let next = if j + 1 == MAX_POWER { j } else { j + 1 };
+                let divided = a[i].checked_shr((j + 1) as u32).unwrap_or(0);
+                dp[i + 1][next] = cmp::max(dp[i][j] + divided, dp[i + 1][next]);
             }
-            answer += list.len();
         }
-        println!("{}", answer);
+
+        let mut answer = i64::MIN;
+        for j in 0..MAX_POWER {
+            answer = cmp::max(dp[n][j], answer);
+        }
+        println!("{answer}");
     }
 }
 
